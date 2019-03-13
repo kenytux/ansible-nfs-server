@@ -13,7 +13,7 @@
     - 'nfs-kernel-server'
   when: ansible_os_family == "Debian"
 
-- name: config | Ensuring All Paths Exist
+- name: config | Creating export paths
   file:
     dest: "{{ item['path'] }}"
     owner: "{{ _nfs_server_owner }}"
@@ -24,7 +24,40 @@
   with_items: '{{ nfs_server_exports }}'
   when: nfs_server_exports is defined
 
-- name: config | Configuring /etc/exports
+- name: config | Creating NFSv4 bind mounts
+  file:
+    dest: "{{ nfs_v4_mount_root }}/{{ item['name'] }}"
+    owner: "{{ _nfs_server_owner }}"
+    group: "{{ _nfs_server_group }}"
+    mode: "{{ item['mode']|default(omit) }}"
+    state: "directory"
+  become: true
+  with_items: '{{ nfs_server_exports }}'
+  when:
+    - nfs_server_exports is defined
+    - nfs_v4_enable == true
+
+- name: config | Adding NFSv4 bind mount fstab entries
+  mount:
+    path: "{{ nfs_v4_mount_root }}/{{ item['name'] }}"
+    src: "{{ item['path'] }}"
+    fstype: none
+    opts: bind
+    state: mounted
+  become: true
+  with_items: '{{ nfs_server_exports }}'
+  when:
+    - nfs_server_exports is defined
+    - nfs_v4_enable == true
+
+
+- name: debugdebug
+  debug:
+    msg: "DEBUGDEBUG {{ item['name'] }}"
+  with_items: '{{ nfs_server_exports }}'
+
+
+- name: Configuring /etc/exports
   template:
     src: "etc/exports.j2"
     dest: "/etc/exports"
@@ -33,3 +66,60 @@
     mode: "u=rw,g=r,o=r"
   become: true
   notify: "restart {{ _nfs_server_service }}"
+
+
+###
+
+- name: Setting defaults in /etc/sysconfig/nfs
+  lineinfile:
+    dest: /etc/sysconfig/nfs
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^SECURE_NFS',
+        line: 'SECURE_NFS="{{ nfs_v4_kerberized }}"' }
+    - { regexp: '^RPCNFSDCOUNT',
+        line: 'RPCNFSDCOUNT={{ nfs_server_rpcnfsdcount }}' }
+    - { regexp: '^RPCNFSDARGS',
+        line: "RPCNFSDARGS=\"{{ nfs_server_rpcnfsdopts | join(' ') }}\"" }
+    - { regexp: '^RPCMOUNTDOPTS',
+        line:  "RPCMOUNTDOPTS=\"{{ nfs_server_rpcmountdopts | join(' ') }}\"" }
+  become: true
+  notify: "restart {{ _nfs_server_service }}"
+  when: ansible_os_family == "RedHat"
+
+
+###
+
+
+- name: Setting domains in /etc/idmapd.conf
+  ini_file:
+    path: /etc/idmapd.conf
+    section: General
+    option: Domain
+    value: "{{ nfs_v4_idmap_domain }}"
+  ini_file:
+    path: /etc/idmapd.conf
+    section: General
+    option: Local-Realms
+    value: "{{ nfs_v4_kerberos_realm }}"
+  when: manage_idmapd == true
+
+
+
+- name: Create NFSv4 bind mount directory
+  file:
+    path: "{{ nfs_v4_mount_root }}| default('/srv')"
+    state: 'directory'
+    mode: 0755
+
+
+
+# - name: Configuring bind mounts
+#    mount:
+#      path: /srv/foo
+#      src: /dev/sda
+#      fstype: none
+#      opts: bind
+#      state: present
+#    when: nfs_v4_enable == true

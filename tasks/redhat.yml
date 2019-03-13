@@ -1,14 +1,9 @@
 ---
-- name: redhat | Installing NFS Package
-  yum:
-    name: "nfs-utils"
-    state: "present"
+- name: redhat | Installing Base NFS Packages
+  package: name={{ item }} state=present
+  with_items:
+    - nfs-utils
+    - nfs4-acl-tools
+    - gssproxy
   become: true
   when: ansible_distribution != "Fedora"
-
-- name: redhat | Installing NFS Package
-  dnf:
-    name: "nfs-utils"
-    state: "present"
-  become: true
-  when: ansible_distribution == "Fedora"
