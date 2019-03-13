@@ -56,6 +56,7 @@ nfs_server_exports: []
   #         - 'no_root_squash'
   #   mode: "u=rwx,g=rx,o=rx"
   #   path: '/opt/nfs/test1'
+  #   name: 'test1'
   # - export:
   #   access:
   #     - hostname: '*'
@@ -66,6 +67,33 @@ nfs_server_exports: []
   #         - 'no_root_squash'
   #   mode: "u=rwx,g=rwx,o=rwx"
   #   path: '/opt/nfs/test2'
+  #   name: 'test2'
+
+#
+# NFSv4 Options
+#
+
+# Configure pseudoroot and bind mounts
+nfs_v4_enable: true
+
+# NFSv4 pseudoroot
+nfs_v4_mount_root: '/srv'
+
+# Mount points
+nfs_v4_export_root: '/exports'
+
+# Enable gssproxy?
+nfs_v4_kerberized: true
+
+# Manage /etc/idmapd.conf; enable and run rpc.idmapd
+manage_idmapd: true
+
+
+# Variables for /etc/idmapd.conf
+nfs_v4_kerberos_realm: 'AD.SFU.CA'
+nfs_v4_idmap_domain: 'ad.sfu.ca'
+
+
 
 # Options for rpc.mountd.
 # If you have a port-based firewall, you might want to set up
