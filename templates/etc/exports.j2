@@ -25,7 +25,7 @@
 {% if nfs_server_exports %}
 {% for item1 in nfs_server_exports %}
 {{ item1['path'] }}  {%   for item2 in item1['access'] %}
-{% if not loop.first %}    {% endif %}{{ item2['hostname'] }}(fsid=0,{{ item2['options']|join(",") }}) {% if not loop.last %}\{% endif %}
+{% if not loop.first %}    {% endif %}{{ item2['hostname'] }}({{ item2['options']|join(",") }}) {% if not loop.last %}\{% endif %}
 
 {%     endfor %}
 {%   endfor %}
